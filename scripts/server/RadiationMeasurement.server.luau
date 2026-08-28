@@ -5,6 +5,9 @@ local function attachDose(player: Player)
 	local DoseRateInstance = Instance.New("NumberValue", player)
 	DoseRateInstance.Name = "DoseRate"
 	DoseRateInstance.Value = 0
+	local AccumulatedDoseInstance = Instance.New("NumberValue", player)
+	AccumulatedDoseInstance.Name = "AccumulatedDose"
+	AccumulatedDoseInstance.Value = 0
 end
 
 Players.PlayerAdded:Connect(attachDose)
@@ -30,19 +33,26 @@ local function sampleRate(position: Vector3)
 	return doseTotal
 end
 
+Players.PlayerAdded:Connect(function(player)
+    player.Respawned:Connect(function()
+        player:FindChild("DoseRate").Value = 0
+				player:FindChild("Dose").Value = 0
+    end)
+end)
+
 while true do
 	sources = world:GetDescendantsWithTag("Radioactive")
 	for _, player in ipairs(Players:GetPlayers()) do
 		local doseRate = player:FindChild("DoseRate")
 		local dose = player:FindChild("Dose")
+		local accumulatedDose = player:FindChild("AccumulatedDose")
 		
 		if doseRate and dose then
 			local rate = sampleRate(player.Position)
 			doseRate.Value = rate
 			dose.Value = dose.Value + rate * dt
-			print(rate)
+			accumulatedDose.Value = accumulatedDose.Value + rate * dt
 		end
 	end
-	print("Measured")
 	wait(dt)
 end
