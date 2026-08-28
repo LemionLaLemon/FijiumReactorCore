@@ -1,4 +1,4 @@
-local RWPService: Folder = world:WaitChild("TotallyRWPService")
+local RWPService: Folder = world:FindChild("TotallyRWPService")
 
 local dosimeterInfoUI: UIView = script.Parent:WaitChild("DosimeterInfoUI"):WaitChild("Info")
 local UIdose: UILabel = dosimeterInfoUI:WaitChild("dose")
@@ -30,7 +30,7 @@ prompt.Interacted:Connect(function(player)
 	for _, item in pairs(player:GetChildren()) do
 		if string.find(item.Name, "Dosimeter") then
 			hasDosimeter = true
-			return
+			break
 		end
 	end
 	if not hasDosimeter then return end
@@ -42,8 +42,7 @@ prompt.Interacted:Connect(function(player)
 	local rwpCoverage: {string} = {"A", "B", "C"}
 	local rwpCoverageString: string = "A, B, C"
 	
-	local RWP: Folder = RWPService:FindChild(player.UserID)
-	print(RWP)
+	local RWP: Folder = RWPService and RWPService:FindChild(player.UserID)
 	local dose = player:FindChild("Dose")
 	
 	if dose then
