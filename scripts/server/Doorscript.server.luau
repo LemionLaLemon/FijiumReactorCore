@@ -6,21 +6,13 @@ local LeftClosedRotY: number = Left.Rotation.Y
 local RightClosedRotY: number = Right.Rotation.Y
 local Open: boolean = false
 
-local OpenSound = Instance.New("Sound", Door)
-OpenSound.PlayInWorld = true
-OpenSound.Volume = 0.7
-OpenSound.Audio = PTAudioAsset.New(105227)
-OpenSound.MaxDistance = 40
-OpenSound.AttenuationMode = Enums.SoundAttenuationMode.Linear
+local OpenSound = world.TotallyAudioService:WaitChild("OpenSound"):Clone()
 OpenSound.Position = Door.Position
+OpenSound.Parent = Door
 
-local CloseSound = Instance.New("Sound", Door)
-CloseSound.PlayInWorld = true
-CloseSound.Volume = 0.7
-CloseSound.Audio = PTAudioAsset.New(97784)
-CloseSound.MaxDistance = 40
-CloseSound.AttenuationMode = Enums.SoundAttenuationMode.Linear
+local CloseSound = world.TotallyAudioService:WaitChild("CloseSound"):Clone()
 CloseSound.Position = Door.Position
+CloseSound.Parent = Door
 
 local function SetDoor(open: boolean)
   local leftRotation, rightRotation = LeftClosedRotY, RightClosedRotY
