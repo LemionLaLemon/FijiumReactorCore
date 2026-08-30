@@ -42,7 +42,7 @@ prompt.Interacted:Connect(function(player)
 	local rwpCoverage: {string} = {"A", "B", "C"}
 	local rwpCoverageString: string = "A, B, C"
 	
-	local RWP: Folder = RWPService and RWPService:FindChild(player.UserID)
+	local RWP: Folder = RWPService and RWPService:FindChild(tostring(player.UserID))
 	local dose = player:FindChild("Dose")
 	
 	if dose then

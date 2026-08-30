@@ -302,22 +302,22 @@ local function connect(btn: Instance, fn: () -> ())
 	if btn.Activated then btn.Activated:Connect(fn); return end
 	if btn.MouseClick then btn.MouseClick:Connect(fn); return end
 	if btn.Triggered then btn.Triggered:Connect(fn); return end
-	btn.Clicked:Connect(function() fn() end)
+	btn.Clicked:Connect(function(player) fn(player) end)
 end
 
 connect(b1Up, function() hallUp[1] = true; updateIndicators() end)
 connect(b2Up, function() hallUp[2] = true; updateIndicators() end)
 connect(b2Down, function() hallDown[2] = true; updateIndicators() end)
 connect(b3Down, function() hallDown[3] = true; updateIndicators() end)
-connect(bCar1, function()
+connect(bCar1, function(player)
 	carCall[1] = true
-	if currentFloor == 2 and floor2HallDir == "up" then print("Pathetic") end
+	if currentFloor == 2 and floor2HallDir == "up" then Achievements:AwardAsync(player.UserID, 237247) end
 	updateIndicators()
 end)
 connect(bCar2, function() carCall[2] = true; updateIndicators() end)
-connect(bCar3, function()
+connect(bCar3, function(player)
 	carCall[3] = true
-	if currentFloor == 2 and floor2HallDir == "down" then print("Pathetic") end
+	if currentFloor == 2 and floor2HallDir == "down" then Achievements:AwardAsync(player.UserID, 237247) end
 	updateIndicators()
 end)
 connect(openButton, function()

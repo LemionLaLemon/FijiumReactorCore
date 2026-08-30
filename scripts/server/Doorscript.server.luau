@@ -31,6 +31,10 @@ end
 local players = {} 
 local closeGen = 0
 
+Players.PlayerRemoved:Connect(function(player)
+	players[player] = nil
+end)
+
 local function playerInside()
   for _ in pairs(players) do 
 		return true 

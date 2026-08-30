@@ -90,7 +90,7 @@ while true do
 		
 		if dose.Value and dose.Value ~= nil then
 			if doseAlarm and not mute then
-				alarm:PlayOneShot(0.5)
+				alarm:Play()
 			end
 		end
 	end
