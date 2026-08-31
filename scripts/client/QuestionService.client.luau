@@ -6,10 +6,13 @@ local QuestionRequestEvent: NetworkEvent = world:WaitChild("TotallyQuestionServi
 local QuestionResponseEvent: NetworkEvent = world:WaitChild("TotallyQuestionService"):WaitChild("QuestionResponse")
 
 local function makeImage(id)
-	local a = PTImageAsset.New(script)
-	a.ImageID = id
-	a.ImageType = Enums.ImageType.Asset
-	return a
+	local ok, asset = pcall(function()
+		local a = PTImageAsset.New(script)
+		a.ImageID = id
+		a.ImageType = Enums.ImageType.Asset
+		return a
+	end)
+	return ok and asset or nil
 end
 local SelectedAsset = makeImage(237562)
 local UnselectedAsset = makeImage(237561)

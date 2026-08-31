@@ -103,22 +103,17 @@ end
 
 local dt = 1/60
 while true do
-	-- Only matters while the tool is actually equipped, and LocalPlayer
-	-- can briefly be nil (join/respawn/disconnect) — guard both.
-	if not hasPlayer then return end
-	local player = Players.LocalPlayer
-	if not player then return end
+	if hasPlayer then
+		local player = Players.LocalPlayer
+		if player and player.Character then
+			alarm.Position = player.Position
 
-	-- Keep the 3D alarm sound glued to the player every frame (this used
-	-- to be the entire body of _Update, now it's just folded in here).
-	alarm.Position = player.Position
-
-	-- Everything else (dose check, blink, alarm trigger) only needs to
-	-- run a couple times a second, same cadence as the old wait(0.5) loop.
-	tickTimer += dt
-	if tickTimer >= TICK_INTERVAL then
-		tickTimer -= TICK_INTERVAL
-		tick()
+			tickTimer += dt
+			if tickTimer >= TICK_INTERVAL then
+				tickTimer -= TICK_INTERVAL
+				tick()
+			end
+		end
 	end
 	wait(1/60)
 end

@@ -10,15 +10,19 @@ local RWPBottomOffset = 50
 local RWPTopOffset = -450
 
 local function makeImage(id)
-	local a = PTImageAsset.New(script)
-	a.ImageID = id
-	a.ImageType = Enums.ImageType.Asset
-	return a
+	local ok, asset = pcall(function()
+		local a = PTImageAsset.New(script)
+		a.ImageID = id
+		a.ImageType = Enums.ImageType.Asset
+		return a
+	end)
+	return ok and asset or nil
 end
 
 local RWPImages = {}
 for zone, id in pairs(RWPID) do
-	RWPImages[zone] = makeImage(id)
+	local img = makeImage(id)
+	if img then RWPImages[zone] = img end
 end
 
 local Bell: Model = script.Parent.Bell

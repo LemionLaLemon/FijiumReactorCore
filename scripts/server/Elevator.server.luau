@@ -200,14 +200,18 @@ end
 local function slide(d: any, open: boolean, dur: number)
 	local pos = d.part.Position
 	local x = open and (d.homeX - d.openX) or d.homeX
-	local tween = Tween.NewTween()
+	local tween = Tween:NewTween()
 	tween:TweenPosition(d.part, Vector3.New(x, pos.Y, pos.Z), dur)
 	return tween
 end
 
 local function await(tweens: {any})
 	for _, t in ipairs(tweens) do
-		t.Finished:Wait()
+		pcall(function()
+			if t and t.Finished then
+				t.Finished:Wait()
+			end
+		end)
 	end
 end
 
@@ -311,13 +315,17 @@ connect(b2Down, function() hallDown[2] = true; updateIndicators() end)
 connect(b3Down, function() hallDown[3] = true; updateIndicators() end)
 connect(bCar1, function(player)
 	carCall[1] = true
-	if currentFloor == 2 and floor2HallDir == "up" then Achievements:AwardAsync(player.UserID, 237247) end
+	if player and currentFloor == 2 and floor2HallDir == "up" then
+		pcall(function() Achievements:AwardAsync(player.UserID, 237247) end)
+	end
 	updateIndicators()
 end)
 connect(bCar2, function() carCall[2] = true; updateIndicators() end)
 connect(bCar3, function(player)
 	carCall[3] = true
-	if currentFloor == 2 and floor2HallDir == "down" then Achievements:AwardAsync(player.UserID, 237247) end
+	if player and currentFloor == 2 and floor2HallDir == "down" then
+		pcall(function() Achievements:AwardAsync(player.UserID, 237247) end)
+	end
 	updateIndicators()
 end)
 connect(openButton, function()
