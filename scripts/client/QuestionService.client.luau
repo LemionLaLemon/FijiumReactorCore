@@ -6,25 +6,39 @@ local QuestionRequestEvent: NetworkEvent = world:WaitChild("TotallyQuestionServi
 local QuestionResponseEvent: NetworkEvent = world:WaitChild("TotallyQuestionService"):WaitChild("QuestionResponse")
 
 local function makeImage(id)
-	local a = PTImageAsset.New(script)
-	a.ImageID = id
-	a.ImageType = Enums.ImageType.Asset
-	return a
+	local ok, asset = pcall(function()
+		local a = PTImageAsset.New(script)
+		a.ImageID = id
+		a.ImageType = Enums.ImageType.Asset
+		return a
+	end)
+	return ok and asset or nil
 end
 local SelectedAsset = makeImage(237562)
 local UnselectedAsset = makeImage(237561)
 
-local function showResponses(...)
-	local responses = {...}
-	local selectedResponse = 1
-	local done = BindableEvent.New(script)
-	local resolved = false
-	local chosen
+-- Client-side concurrency control
+local currentQuestionId = 0
+local activeDoneEvent = nil
 
+local function showResponses(questionId, responses)
+	-- Cancel previous pending dialog if any
+	if activeDoneEvent then
+		pcall(function() activeDoneEvent:Invoke(nil) end)
+	end
+
+	local done = BindableEvent.New(script)
+	activeDoneEvent = done
+	local selectedResponse = 1
+	local resolved = false
+	local chosen = nil
+
+	-- Clean up previous buttons
 	for _, item in ipairs(QuestionsFrame:GetChildren()) do
 		item:Destroy()
 	end
 
+	-- Instantiate new response options
 	for i, response in ipairs(responses) do
 		local responseItem = ResponseTemplate:Clone()
 		responseItem.Name = tostring(i)
@@ -33,25 +47,30 @@ local function showResponses(...)
 		responseItem.Parent = QuestionsFrame
 
 		responseItem.MouseEnter:Connect(function()
+			if resolved or currentQuestionId ~= questionId then return end
 			local prev = QuestionsFrame:FindChild(tostring(selectedResponse))
 			if prev and prev ~= responseItem then prev.Selection.Image = UnselectedAsset end
 			responseItem.Selection.Image = SelectedAsset
 			selectedResponse = i
 		end)
+
 		responseItem.MouseExit:Connect(function()
+			if resolved or currentQuestionId ~= questionId then return end
 			responseItem.Selection.Image = UnselectedAsset
 		end)
+
 		responseItem.MouseUp:Connect(function()
-			if resolved then return end
+			if resolved or currentQuestionId ~= questionId then return end
 			resolved = true
-			selectedResponse = i
 			chosen = response
-			done:Invoke()
+			done:Invoke(chosen)
 		end)
 	end
 
-	local inputConn = Input.KeyDown:Connect(function(key, gamefocused)
-		if not gamefocused then return end
+	-- Key navigation (R, F, Enter)
+	local inputConn
+	inputConn = Input.KeyDown:Connect(function(key, gamefocused)
+		if not gamefocused or resolved or currentQuestionId ~= questionId then return end
 		if key == Enums.KeyCode.F or key == Enums.KeyCode.R then
 			local prev = QuestionsFrame:FindChild(tostring(selectedResponse))
 			if prev then prev.Selection.Image = UnselectedAsset end
@@ -61,51 +80,68 @@ local function showResponses(...)
 			local cur = QuestionsFrame:FindChild(tostring(selectedResponse))
 			if cur then cur.Selection.Image = SelectedAsset end
 		elseif key == Enums.KeyCode.Enter then
-			if resolved then return end
 			resolved = true
 			chosen = responses[selectedResponse]
-			done:Invoke()
+			done:Invoke(chosen)
 		end
 	end)
 
-	local closeConn = CloseButton.MouseUp:Connect(function()
-		if resolved then return end
+	-- Close button listener
+	local closeConn
+	closeConn = CloseButton.MouseUp:Connect(function()
+		if resolved or currentQuestionId ~= questionId then return end
 		resolved = true
 		chosen = nil
-		done:Invoke()
+		done:Invoke(nil)
 	end)
 
 	QuestionGUI.Visible = true
 
+	-- Safety timeout (30 seconds)
 	coroutine.wrap(function()
-		wait(60)
-		if resolved then return end
-		resolved = true
-		chosen = nil
-		done:Invoke()
+		wait(30)
+		if not resolved and currentQuestionId == questionId then
+			resolved = true
+			done:Invoke(nil)
+		end
 	end)()
 
-	done.Invoked:Wait()
+	-- Wait for resolution
+	local answer = done.Invoked:Wait()
 
-	inputConn:Disconnect()
-	closeConn:Disconnect()
-	done:Destroy()
-	QuestionGUI.Visible = false
-	for _, item in ipairs(QuestionsFrame:GetChildren()) do
-		item:Destroy()
+	-- Clean up connections and BindableEvent safely
+	if inputConn then inputConn:Disconnect() end
+	if closeConn then closeConn:Disconnect() end
+	pcall(function() done:Destroy() end)
+	if activeDoneEvent == done then activeDoneEvent = nil end
+
+	-- Only hide UI if this question is still the active one
+	if currentQuestionId == questionId then
+		QuestionGUI.Visible = false
+		for _, item in ipairs(QuestionsFrame:GetChildren()) do
+			item:Destroy()
+		end
 	end
 
-	return chosen
+	return answer
 end
 
 QuestionRequestEvent.InvokedClient:Connect(function(msg)
+	currentQuestionId += 1
+	local myQId = currentQuestionId
 	local count = msg:GetInt("count")
 	local options = {}
 	for i = 1, count do
 		options[i] = msg:GetString("opt" .. i)
 	end
-	local answer = showResponses(table.unpack(options))
-	local resp = NetMessage.New()
-	resp:AddString("answer", answer or "")
-	QuestionResponseEvent:InvokeServer(resp)
+
+	local answer = showResponses(myQId, options)
+
+	-- Only send answer if this question was not superseded
+	if currentQuestionId == myQId then
+		local resp = NetMessage.New()
+		resp:AddInt("qid", myQId)
+		resp:AddString("answer", answer or "")
+		QuestionResponseEvent:InvokeServer(resp)
+	end
 end)

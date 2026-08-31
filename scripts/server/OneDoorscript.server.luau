@@ -21,7 +21,7 @@ local function SetDoor(open: boolean)
 	
   local doorTween = Tween:NewTween()
 	
-  doorTween:TweenRotation(Door, Vector3.New(0, Rotation, 0), 0.5)
+  doorTween:TweenRotation(Door, Vector3.New(Door.Rotation.X, Rotation, Door.Rotation.Z), 0.5)
 end
 
 local players = {}

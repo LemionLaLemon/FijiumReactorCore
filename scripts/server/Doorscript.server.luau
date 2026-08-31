@@ -24,8 +24,8 @@ local function SetDoor(open: boolean)
 	
   local leftTween, rightTween = Tween:NewTween(), Tween:NewTween()
 	
-  leftTween:TweenRotation(Left, Vector3.New(0, leftRotation, 0), 0.5)
-  rightTween:TweenRotation(Right, Vector3.New(0, rightRotation, 0), 0.5)
+  leftTween:TweenRotation(Left, Vector3.New(Left.Rotation.X, leftRotation, Left.Rotation.Z), 0.5)
+  rightTween:TweenRotation(Right, Vector3.New(Right.Rotation.X, rightRotation, Right.Rotation.Z), 0.5)
 end
 
 local players = {} 
@@ -47,7 +47,7 @@ Hitbox.Touched:Connect(function(object: Physical)
   players[object] = true
   closeGen += 1
   if not Open then
-	  OpenSound.Pitch = math.random(0.9, 1.1)
+	  OpenSound.Pitch = 0.9 + math.random() * 0.2
 	  OpenSound:Play()
 	  Open = true
 	  SetDoor(true)
@@ -63,7 +63,7 @@ Hitbox.TouchEnded:Connect(function(object: Physical)
   spawn(function()
     wait(1)
     if myGen == closeGen and Open and not playerInside() then
-      CloseSound.Pitch = math.random(0.9, 1.1)
+      CloseSound.Pitch = 0.9 + math.random() * 0.2
       CloseSound:Play()
       Open = false
       SetDoor(false)
