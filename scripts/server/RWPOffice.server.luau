@@ -16,6 +16,15 @@ local function makeImage(id)
 	return a
 end
 
+-- Build each zone's image once and reuse it, instead of constructing a
+-- brand new PTImageAsset (parented to `script`, never destroyed) every
+-- single time a permit is checked or issued. Previously that leaked one
+-- orphaned asset per interaction, forever.
+local RWPImages = {}
+for zone, id in pairs(RWPID) do
+	RWPImages[zone] = makeImage(id)
+end
+
 local Bell: Model = script.Parent.Bell
 local Ding: Sound = Bell.Ding
 local RPCRT: Model = script.Parent.RPCRT.GUI3D
@@ -69,7 +78,7 @@ Bell.Hitbox.Clicked:Connect(function(player)
 			for _, z in ipairs({"F", "E", "D"}) do
 				if coverage and coverage:FindChild(z) then zone = z; break end
 			end
-			RWPUI.Image = makeImage(RWPID[zone])
+			RWPUI.Image = RWPImages[zone]
 		else
 			RWPNumber.Text = "NO PERMIT"
 		end
@@ -125,7 +134,7 @@ Bell.Hitbox.Clicked:Connect(function(player)
 			for _, z in ipairs({"F", "E", "D"}) do
 				if coverage and coverage:FindChild(z) then topZone = z; break end
 			end
-			RWPUI.Image = makeImage(RWPID[topZone])
+			RWPUI.Image = RWPImages[topZone]
 		else
 			RWPNumber.Text = "NO PERMIT"
 		end

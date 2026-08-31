@@ -18,6 +18,12 @@ local mute: boolean = false
 
 local updateConnection: PTSignalConnection
 
+-- Replaces the old `while true ... wait(0.5) end` loop. Instead of a
+-- separate sleeping thread, we accumulate real dt from _Update() and
+-- only run the dose/alarm/blink check once we've crossed this interval.
+local TICK_INTERVAL = 0.5
+local tickTimer = 0
+
 local function fitScreen(v: number): string
   if v < 0 then v = 0 end
   if v >= 100000 then return "Ol." end
@@ -44,9 +50,11 @@ Dosimeter.Equipped:Connect(function()
 end)
 
 Dosimeter.Unequipped:Connect(function()
+	hasPlayer = false
 	Tooltip.Text = ""
 	if updateConnection then
 		updateConnection:Disconnect()
+		updateConnection = nil
 	end
 end)
 
@@ -67,32 +75,50 @@ Input.KeyDown:Connect(function(key: KeyCodeEnum)
 	end
 end)
 
-function _Update()
-	alarm.Position = Players.LocalPlayer.Position
+-- The periodic half-second-ish dosimeter tick: dose/alarm check + blink.
+-- Pulled out of _Update() itself just to keep that function readable.
+local function tick()
+	local player = Players.LocalPlayer
+	if not player then return end
+
+	-- FindChild, not WaitChild: WaitChild yields indefinitely if the
+	-- value isn't there yet, which would stall the whole per-frame hook.
+	-- FindChild just skips this tick instead and tries again next time.
+	local dose = player:FindChild("Dose")
+	local doseRate = player:FindChild("DoseRate")
+	if not (dose and doseRate) then return end
+
+	local doseAlarm = dose.Value >= doseLimit
+	--todo: add detection for doseRateAlarm
+	local doseRateAlarm = false
+
+	mode.Visible = not mode.Visible
+	local showAlarm = (doseRateMode and doseRateAlarm) or (not doseRateMode and doseAlarm)
+	alarmmode.Visible = showAlarm and not mode.Visible
+
+	if doseAlarm and not mute then
+		alarm:Play()
+	end
 end
 
+local dt = 1/60
 while true do
-	if hasPlayer then
-		local dose = Players.LocalPlayer:WaitChild("Dose")
-		local doseRate = Players.LocalPlayer:WaitChild("DoseRate")
-		local doseAlarm = false
-		local doseRateAlarm = false
-		if dose.Value >= doseLimit then
-			doseAlarm = true
-		else
-			doseAlarm = false
-		end
-		--todo: add detection for doseRateAlarm
-		
-		mode.Visible = not mode.Visible
-		local showAlarm = (doseRateMode and doseRateAlarm) or (not doseRateMode and doseAlarm)
-		alarmmode.Visible = showAlarm and not mode.Visible
-		
-		if dose.Value and dose.Value ~= nil then
-			if doseAlarm and not mute then
-				alarm:Play()
-			end
-		end
+	-- Only matters while the tool is actually equipped, and LocalPlayer
+	-- can briefly be nil (join/respawn/disconnect) — guard both.
+	if not hasPlayer then return end
+	local player = Players.LocalPlayer
+	if not player then return end
+
+	-- Keep the 3D alarm sound glued to the player every frame (this used
+	-- to be the entire body of _Update, now it's just folded in here).
+	alarm.Position = player.Position
+
+	-- Everything else (dose check, blink, alarm trigger) only needs to
+	-- run a couple times a second, same cadence as the old wait(0.5) loop.
+	tickTimer += dt
+	if tickTimer >= TICK_INTERVAL then
+		tickTimer -= TICK_INTERVAL
+		tick()
 	end
-	wait(0.5)
+	wait(1/60)
 end
